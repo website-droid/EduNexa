@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>EduNexa Ultimate - Complete CBE School Management | Kenya</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f0f2f5; overflow-x: hidden; }
+        
+        .sidebar { 
+            position: fixed; left: 0; top: 0; width: 280px; height: 100%; 
+            background: linear-gradient(135deg, #1a3a1a, #0d2b0d); color: white; 
+            z-index: 1000; transition: transform 0.3s ease; overflow-y: auto;
+            transform: translateX(0);
+        }
+        .sidebar.closed { transform: translateX(-280px); }
+        
+        .sidebar-header { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header h2 { font-size: 24px; font-weight: 800; }
+        .sidebar-header h2 i { color: #ffcd3c; margin-right: 8px; }
+        .sidebar-header h2 span { color: #ffcd3c; }
+        .sidebar-header p { font-size: 11px; opacity: 0.7; margin-top: 5px; }
+        .nav-menu { padding: 20px 0; }
+        .nav-item { padding: 12px 25px; display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.8); cursor: pointer; transition: all 0.3s; margin: 5px 0; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,205,60,0.2); color: #ffcd3c; border-left: 3px solid #ffcd3c; }
+        .nav-item i { width: 22px; font-size: 16px; }
+        
+        .main-content { margin-left: 280px; padding: 20px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        .main-content.expanded { margin-left: 0; }
+        
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: #2b5e2b;
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        .mobile-menu-btn:hover { background: #1a3a1a; transform: scale(1.05); }
+        
+        .top-bar { background: white; border-radius: 16px; padding: 15px 25px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .welcome-text h3 { color: #1a3a1a; font-size: 18px; }
+        .welcome-text h3 i { color: #ffcd3c; margin-right: 8px; }
+        .welcome-text p { color: #666; font-size: 13px; margin-top: 3px; }
+        .date-time { background: #f0f2f5; padding: 8px 18px; border-radius: 40px; font-size: 13px; color: #1a3a1a; }
+        
+        .auth-container { max-width: 500px; margin: 80px auto; background: white; border-radius: 28px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; }
+        .auth-container h2 { color: #1a3a1a; margin-bottom: 30px; }
+        .auth-container h2 i { color: #ffcd3c; margin-right: 10px; }
+        
+        /* Password field with eye icon */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .password-wrapper input {
+            width: 100%;
+            padding: 14px;
+            padding-right: 45px;
+            border: 2px solid #e0e8dc;
+            border-radius: 16px;
+            font-size: 16px;
+        }
+        .password-wrapper .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+        .password-wrapper .toggle-password:hover {
+            color: #2b5e2b;
+        }
+        
+        .auth-container input[type="email"],
+        .auth-container input[type="text"],
+        .auth-container input[type="tel"] {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 2px solid #e0e8dc;
+            border-radius: 16px;
+            font-size: 16px;
+        }
+        .auth-container button { width: 100%; padding: 14px; margin-top: 20px; }
+        .auth-switch { margin-top: 20px; color: #666; }
+        .auth-switch a { color: #2b5e2b; text-decoration: none; font-weight: 600; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: white; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.3s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon { width: 55px; height: 55px; background: #e8f5e9; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #2b5e2b; }
+        .stat-info h4 { font-size: 24px; font-weight: 800; color: #1a3a1a; }
+        .stat-info p { font-size: 12px; color: #666; }
+        
+        .quick-actions { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .action-btn { background: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 600; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 14px; }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .action-btn.primary { background: #2b5e2b; color: white; }
+        .action-btn.warning { background: #ff8c00; color: white; }
+        .action-btn.excel { background: #1a7431; color: white; }
+        .action-btn.ai { background: #6c5ce7; color: white; }
+        .action-btn.danger { background: #e74c3c; color: white; }
+        .action-btn.info { background: #3498db; color: white; }
+        .action-btn.stream { background: #9b59b6; color: white; }
+        .action-btn.clear-marks { background: #e67e22; color: white; }
+        
+        .section-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f2f5; flex-wrap: wrap; gap: 10px; }
+        .section-header h3 { color: #1a3a1a; font-size: 18px; }
+        .section-header h3 i { color: #ffcd3c; margin-right: 8px; }
+        
+        .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th, .data-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #f0f2f5; }
+        .data-table th { background: #f8f9fa; font-weight: 700; color: #1a3a1a; position: sticky; top: 0; z-index: 10; }
+        .rank-badge { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; background: #2b5e2b; color: white; font-weight: bold; font-size: 12px; }
+        .rank-1 { background: #ffd700; color: #1a3a1a; }
+        
+        .ai-chat { position: fixed; bottom: 20px; right: 20px; width: 350px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000; display: none; flex-direction: column; max-height: 500px; }
+        .ai-chat.open { display: flex; }
+        .ai-chat-header { background: #2b5e2b; color: white; padding: 15px; border-radius: 20px 20px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .ai-chat-body { padding: 15px; height: 350px; overflow-y: auto; }
+        .ai-chat-input { padding: 15px; border-top: 1px solid #e0e8dc; display: flex; gap: 10px; }
+        .ai-chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; }
+        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 15px; max-width: 85%; word-wrap: break-word; }
+        .user-message { background: #2b5e2b; color: white; margin-left: auto; }
+        .bot-message { background: #f0f2f5; color: #333; }
+        .ai-toggle { position: fixed; bottom: 20px; right: 20px; width: 55px; height: 55px; border-radius: 50%; background: #6c5ce7; color: white; border: none; cursor: pointer; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 999; }
+        
+        .report-modal, .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .report-content, .modal-content { background: white; border-radius: 20px; padding: 30px; max-width: 1200px; width: 95%; max-height: 85vh; overflow-y: auto; }
+        .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2b5e2b; padding-bottom: 15px; }
+        .school-logo-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; border: 3px solid #ffcd3c; }
+        .logo-upload-area { border: 2px dashed #c8dcc0; border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 15px; transition: all 0.3s; }
+        .logo-upload-area:hover { background: #f8f9fa; border-color: #2b5e2b; }
+        
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #ffcd3c; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2b5e2b; color: white; padding: 12px 24px; border-radius: 40px; z-index: 1000; animation: fadeInOut 3s ease; font-weight: 500; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateX(-50%) translateY(20px); } 15% { opacity: 1; transform: translateX(-50%) translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+        
+        footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-280px); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 60px 15px 20px 15px; }
+            .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+            .top-bar { flex-direction: column; text-align: center; }
+            .quick-actions { justify-content: center; }
+            .section-header { flex-direction: column; align-items: flex-start; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .ai-chat { width: calc(100% - 30px); right: 15px; bottom: 80px; left: 15px; }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .action-btn { padding: 8px 16px; font-size: 12px; }
+            .data-table th, .data-table td { padding: 8px 6px; font-size: 11px; }
+        }
+        
+        .filter-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
+        select, input { border-radius: 12px; border: 1px solid #ddd; padding: 8px 12px; outline: none; }
+        select:focus, input:focus { border-color: #2b5e2b; }
+        .edit-btn { color: #2b5e2b; cursor: pointer; margin-right: 10px; font-size: 16px; }
+        .delete-btn { color: #e74c3c; cursor: pointer; font-size: 16px; }
+        .grade-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
+        .stats-highlight { font-size: 28px; font-weight: 800; color: #2b5e2b; }
+        .stream-selector { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stream-btn { padding: 10px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .stream-btn.north { background: #3498db; color: white; }
+        .stream-btn.south { background: #e74c3c; color: white; }
+        .stream-btn.east { background: #2ecc71; color: white; }
+        .stream-btn.west { background: #f39c12; color: white; }
+        .stream-btn.all { background: #9b59b6; color: white; }
+        .stream-btn.active { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); border: 2px solid #ffcd3c; }
+        hr { margin: 15px 0; border-color: #e0e8dc; }
+        .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stream-card { background: #f8f9fa; border-radius: 16px; padding: 15px; text-align: center; }
+        .warning-box { background: #fff3e0; border-left: 4px solid #e67e22; padding: 15px; border-radius: 12px; margin: 15px 0; }
+        .subject-info { background: #e8f5e9; padding: 10px; border-radius: 12px; margin-bottom: 15px; font-size: 13px; }
+        
+        .mark-input {
+            width: 70px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 13px;
+        }
+        .mark-input:focus {
+            border-color: #2b5e2b;
+            outline: none;
+        }
+        .save-indicator {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 999;
+        }
+        
+        .report-card {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .report-title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+        .report-subtitle { text-align: center; font-size: 16px; color: #555; margin-bottom: 20px; }
+        .student-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .info-label { font-weight: bold; min-width: 120px; }
+        .performance-levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; text-align: center; }
+        .level-card { padding: 10px; border-radius: 12px; text-align: center; }
+        .level-ee { background: #d4edda; border: 2px solid #28a745; }
+        .level-me { background: #d1ecf1; border: 2px solid #17a2b8; }
+        .level-ae { background: #fff3cd; border: 2px solid #ffc107; }
+        .level-be { background: #f8d7da; border: 2px solid #dc3545; }
+        .subjects-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .subjects-table th, .subjects-table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
+        .subjects-table th { background: #2b5e2b; color: white; }
+        .total-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 12px; }
+        .comments-section { margin: 20px 0; padding: 15px; background: #fff3e0; border-radius: 12px; }
+        .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd; }
+        .date-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+        
+        @media print {
+            .no-print { display: none; }
+            body { background: white; padding: 0; margin: 0; }
+            .sidebar, .mobile-menu-btn, .ai-toggle, .ai-chat, .quick-actions, .top-bar, footer, .section-header button, .action-btn { display: none !important; }
+            .main-content { margin: 0; padding: 0; }
+            .report-card { box-shadow: none; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()"><i class="fas fa-bars"></i></button>
+    <button class="ai-toggle" onclick="toggleAIChat()"><i class="fas fa-robot"></i></button>
+
+    <div class="ai-chat" id="aiChat">
+        <div class="ai-chat-header"><span><i class="fas fa-robot"></i> EduNexa AI Assistant</span><i class="fas fa-times" onclick="toggleAIChat()" style="cursor:pointer"></i></div>
+        <div class="ai-chat-body" id="chatBody"><div class="message bot-message">👋 Hello! I'm your EduNexa AI Assistant. Ask me about CBE curriculum, grading, reports, student management, or any school-related questions!</div></div>
+        <div class="ai-chat-input"><input type="text" id="chatInput" placeholder="Ask me anything..." onkeypress="if(event.key==='Enter') sendAIMessage()"><button class="action-btn primary" onclick="sendAIMessage()" style="padding:8px 15px;">Send</button></div>
+    </div>
+
+    <div id="authSection">
+        <div class="auth-container" id="loginForm">
+            <h2><i class="fas fa-graduation-cap"></i> EduNexa Ultimate</h2>
+            <p style="margin-bottom:20px; color:#666;">Complete CBE School Management System</p>
+            <input type="email" id="loginEmail" placeholder="School Email" autocomplete="off">
+            <div class="password-wrapper">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <i class="fas fa-eye toggle-password" onclick="togglePassword('loginPassword', this)"></i>
+            </div>
+            <button class="action-btn primary" onclick="login()">Login <i class="fas fa-arrow-right"></i></button>
+            <div class="auth-switch">Don't have an account? <a href="#" onclick="showSignup()">Register School</a></div>
+        </div>
+        <div class="auth-container" id="signupForm" style="display:none;">
+            <h2><i class="fas fa-school"></i> Register School</h2>
+            <input type="text" id="signupSchoolName" placeholder="School Name">
+            <input type="text" id="signupLocation" placeholder="School Location">
+            <input type="email" id="signupEmail" placeholder="Admin Email">
+            <input type="tel" id="signupPhone" placeholder="Admin Phone">
+            <div class="password-wrapper">
+                <input type="password" id="signupPassword" placeholder="Password (min 6 chars)">
+                <i class="fas fa-eye toggle-password" onclick="togglePassword('signupPassword', this)"></i>
+            </div>
+            <button class="action-btn primary" onclick="signup()">Register <i class="fas fa-user-plus"></i></button>
+            <div class="auth-switch">Already have an account? <a href="#" onclick="showLogin()">Login</a></div>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header"><h2><i class="fas fa-graduation-cap"></i> EDU<span>NEXA</span></h2><p>Complete CBE School System</p></div>
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
+            <div class="nav-item" onclick="showSection('students')"><i class="fas fa-users"></i> Students</div>
+            <div class="nav-item" onclick="showSection('marks')"><i class="fas fa-chart-line"></i> Enter Marks</div>
+            <div class="nav-item" onclick="showSection('ranking')"><i class="fas fa-trophy"></i> Rankings</div>
+            <div class="nav-item" onclick="showSection('streamAnalysis')"><i class="fas fa-chart-pie"></i> 📊 Stream Analyzer</div>
+            <div class="nav-item" onclick="showSection('reports')"><i class="fas fa-file-alt"></i> Reports</div>
+            <div class="nav-item" onclick="showSection('settings')"><i class="fas fa-cog"></i> Settings</div>
+            <div class="nav-item" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainApp" style="display:none;">
+        <div class="top-bar">
+            <div class="welcome-text"><h3><i class="fas fa-school"></i> Welcome to <span id="schoolName">EduNexa</span></h3><p>CBE Curriculum | Kenya | <span id="termDisplay">Term 2, 2024</span></p></div>
+            <div class="date-time"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
+        </div>
+
+        <div id="dashboardSection">
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showSection('students')"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><h4 id="totalStudents">0</h4><p>Total Students</p></div></div>
+                <div class="stat-card" onclick="showSection('ranking')"><div class="stat-icon"><i class="fas fa-chalkboard"></i></div><div class="stat-info"><h4 id="totalClasses">0</h4><p>Active Classes</p></div></div>
+                <div class="stat-card" onclick="showSection('ranking')"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h4 id="classAvg">0%</h4><p>Overall Average</p></div></div>
+                <div class="stat-card" onclick="showSection('ranking')"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-info"><h4 id="topStudentName">-</h4><p>Top Performer</p></div></div>
+            </div>
+            <div class="quick-actions">
+                <button class="action-btn primary" onclick="showSection('marks')"><i class="fas fa-plus"></i> Enter Marks</button>
+                <button class="action-btn warning" onclick="showSection('reports')"><i class="fas fa-chart-bar"></i> Generate Reports</button>
+                <button class="action-btn excel" onclick="exportAllData()"><i class="fas fa-file-excel"></i> Export to Excel</button>
+                <button class="action-btn stream" onclick="showSection('streamAnalysis')"><i class="fas fa-chart-pie"></i> 📊 Stream Analyzer</button>
+                <button class="action-btn ai" onclick="toggleAIChat()"><i class="fas fa-robot"></i> AI Assistant</button>
+            </div>
+            <div class="section-card"><div class="section-header"><h3><i class="fas fa-trophy"></i> Top Performers This Term</h3><button class="action-btn" style="padding:5px 15px; background:#f0f2f5;" onclick="showSection('ranking')">View All →</button></div>
+            <div class="table-wrapper"><table class="data-table"><thead><tr><th>Position</th><th>Student Name</th><th>Class</th><th>Stream</th><th>Average</th><th>Grade</th><th>Performance</th></tr></thead><tbody id="topPerformersBody"></tbody></table></div></div>
+        </div>
+
+        <div id="studentsSection" style="display:none;"><div class="section-card"><div class="section-header"><h3><i class="fas fa-users"></i> All Students</h3><div><button class="action-btn excel" onclick="exportToExcel('students')"><i class="fas fa-file-excel"></i> Export</button><button class="action-btn primary" onclick="openAddStudentModal()"><i class="fas fa-plus"></i> Add Student</button></div></div>
+        <div class="filter-group"><i class="fas fa-search"></i><input type="text" id="studentSearch" placeholder="Search by name or assessment number..." onkeyup="filterStudents()" style="width:250px;"><select id="filterClass" onchange="filterStudents()"><option value="">All Classes</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option></select><span id="studentCount" style="margin-left:auto; font-size:13px; color:#666;"></span></div>
+        <div class="table-wrapper"><table class="data-table"><thead><tr><th>#</th><th>Assessment No.</th><th>Student Name</th><th>Class</th><th>Stream</th><th>Parent Contact</th><th>Avg %</th><th>Action</th></tr></thead><tbody id="studentsListBody"></tbody></table></div></div></div>
+
+        <div id="marksSection" style="display:none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h3><i class="fas fa-edit"></i> Enter CBE Learning Areas Marks</h3>
+                    <div>
+                        <select id="examClass" style="padding:8px 15px; border-radius:20px;" onchange="updateClassOptions()">
+                            <option value="Grade 1">Grade 1 (Lower Primary - 7 Subjects)</option>
+                            <option value="Grade 2">Grade 2 (Lower Primary - 7 Subjects)</option>
+                            <option value="Grade 3">Grade 3 (Lower Primary - 7 Subjects)</option>
+                            <option value="Grade 4">Grade 4 (Upper Primary - 8 Subjects)</option>
+                            <option value="Grade 5">Grade 5 (Upper Primary - 8 Subjects)</option>
+                            <option value="Grade 6">Grade 6 (Upper Primary - 8 Subjects)</option>
+                            <option value="Grade 7">Grade 7 (Junior Secondary - 9 Subjects)</option>
+                            <option value="Grade 8">Grade 8 (Junior Secondary - 9 Subjects)</option>
+                            <option value="Grade 9">Grade 9 (Junior Secondary - 9 Subjects)</option>
+                        </select>
+                        <select id="examStream" style="padding:8px 15px; border-radius:20px;">
+                            <option value="North">North Stream</option>
+                            <option value="South">South Stream</option>
+                            <option value="East">East Stream</option>
+                            <option value="West">West Stream</option>
+                        </select>
+                        <button class="action-btn primary" onclick="loadMarksEntry()" style="padding:8px 20px;"><i class="fas fa-search"></i> Load Students</button>
+                    </div>
+                </div>
+                <div id="subjectInfo" class="subject-info"></div>
+                <div id="marksEntryContainer"></div>
+                <div style="margin-top:20px; display:flex; gap:10px; justify-content:space-between;">
+                    <div><button class="action-btn clear-marks" onclick="quickFillMarks()"><i class="fas fa-magic"></i> Quick Fill (50%)</button></div>
+                    <div><button class="action-btn warning" onclick="saveAllMarks()"><i class="fas fa-save"></i> Save All Marks to Cloud</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="rankingSection" style="display:none;"><div class="section-card"><div class="section-header"><h3><i class="fas fa-trophy"></i> Student Rankings & Performance</h3><div><select id="rankClass" style="padding:8px 15px; border-radius:20px;"><option value="Grade 1">Grade 1</option><option value="Grade 2">Grade 2</option><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option><option value="Grade 5">Grade 5</option><option value="Grade 6">Grade 6</option><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select><button class="action-btn primary" onclick="loadRankings()" style="padding:8px 20px;"><i class="fas fa-search"></i> View Rankings</button><button class="action-btn excel" onclick="exportToExcel('rankings')"><i class="fas fa-file-excel"></i> Export</button></div></div>
+        <div id="rankingsContainer"></div></div></div>
+
+        <div id="streamAnalysisSection" style="display:none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h3><i class="fas fa-chart-pie"></i> 📊 Stream Performance Analyzer</h3>
+                    <div><select id="analysisClass" style="padding:8px 15px; border-radius:20px;"><option value="Grade 1">Grade 1</option><option value="Grade 2">Grade 2</option><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option><option value="Grade 5">Grade 5</option><option value="Grade 6">Grade 6</option><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select><button class="action-btn primary" onclick="loadStreamAnalysis()" style="padding:8px 20px;"><i class="fas fa-sync-alt"></i> Analyze</button></div>
+                </div>
+                <div class="stream-selector">
+                    <button class="stream-btn north" onclick="filterStreamAnalysis('North')"><i class="fas fa-arrow-up"></i> NORTH Stream</button>
+                    <button class="stream-btn south" onclick="filterStreamAnalysis('South')"><i class="fas fa-arrow-down"></i> SOUTH Stream</button>
+                    <button class="stream-btn east" onclick="filterStreamAnalysis('East')"><i class="fas fa-arrow-right"></i> EAST Stream</button>
+                    <button class="stream-btn west" onclick="filterStreamAnalysis('West')"><i class="fas fa-arrow-left"></i> WEST Stream</button>
+                    <button class="stream-btn all" onclick="filterStreamAnalysis('all')"><i class="fas fa-globe"></i> ALL Streams</button>
+                </div>
+                <div id="currentStreamDisplay" style="background: linear-gradient(135deg, #2b5e2b, #1a3a1a); color: white; padding: 15px; border-radius: 16px; margin-bottom: 20px; text-align: center;">
+                    <h3 id="streamTitle">📊 NORTH STREAM ANALYSIS</h3>
+                    <p id="streamStats">Loading...</p>
+                </div>
+                <div id="streamRankingsContainer"></div>
+                <div style="margin-top: 20px;">
+                    <h4><i class="fas fa-chart-bar"></i> Grade Distribution</h4>
+                    <div id="gradeDistributionContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 15px;"></div>
+                </div>
+                <div style="margin-top: 25px;">
+                    <h4><i class="fas fa-chart-line"></i> Stream Comparison</h4>
+                    <div id="streamComparisonContainer" class="comparison-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="reportsSection" style="display:none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <h3><i class="fas fa-file-alt"></i> Generate CBE Reports</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <select id="reportClass" style="padding:10px 15px; border-radius:20px;">
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                        </select>
+                        <select id="reportStream" style="padding:10px 15px; border-radius:20px;">
+                            <option value="all">All Streams</option>
+                            <option value="North">North Stream</option>
+                            <option value="South">South Stream</option>
+                            <option value="East">East Stream</option>
+                            <option value="West">West Stream</option>
+                        </select>
+                        <button class="action-btn primary" onclick="generateClassReportCards()"><i class="fas fa-print"></i> Generate All Report Cards</button>
+                    </div>
+                </div>
+                <div id="batchReportContainer" style="margin-top: 20px;"></div>
+                
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-card" onclick="openReportModal('class')"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div><h4>Class Summary Report</h4><p>Full class performance table</p></div></div>
+                    <div class="stat-card" onclick="openReportModal('student')"><div class="stat-icon"><i class="fas fa-user-graduate"></i></div><div><h4>Single Student Report</h4><p>Individual report card</p></div></div>
+                    <div class="stat-card" onclick="openReportModal('subject')"><div class="stat-icon"><i class="fas fa-book"></i></div><div><h4>Subject Analysis</h4><p>Learning areas performance</p></div></div>
+                    <div class="stat-card" onclick="openReportModal('summary')"><div class="stat-icon"><i class="fas fa-chart-pie"></i></div><div><h4>School Summary</h4><p>Overall statistics</p></div></div>
+                    <div class="stat-card" onclick="exportAllData()"><div class="stat-icon"><i class="fas fa-file-excel"></i></div><div><h4>Export All Data</h4><p>Excel spreadsheet</p></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settingsSection" style="display:none;">
+            <div class="section-card">
+                <div class="section-header"><h3><i class="fas fa-cog"></i> School Settings</h3></div>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>School Name</strong></label><input type="text" id="settingsSchoolName" style="width:100%; max-width:400px; padding:12px; border-radius:12px; border:1px solid #ddd;"></div>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>School Motto</strong></label><input type="text" id="settingsMotto" style="width:100%; max-width:400px; padding:12px; border-radius:12px; border:1px solid #ddd;"></div>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>Current Term</strong></label><select id="settingsTerm" style="padding:12px; border-radius:12px; width:200px;"><option>Term 1</option><option selected>Term 2</option><option>Term 3</option></select></div>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>Academic Year</strong></label><input type="text" id="settingsYear" value="2024" style="width:150px; padding:12px; border-radius:12px; border:1px solid #ddd;"></div>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>School Logo</strong></label><div class="logo-upload-area" onclick="document.getElementById('schoolLogoInput').click()"><i class="fas fa-cloud-upload-alt" style="font-size:30px; color:#2b5e2b;"></i><p>Click to upload school logo</p><small>PNG, JPG (Max 2MB)</small></div><input type="file" id="schoolLogoInput" accept="image/*" style="display:none;"><div id="logoPreview" style="margin-top:10px;"></div></div>
+                <hr>
+                <div class="form-group" style="margin-bottom:15px;"><label><strong>📊 Data Management</strong></label>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="action-btn clear-marks" onclick="confirmClearAllMarks()"><i class="fas fa-eraser"></i> Clear All Marks Only</button>
+                        <button class="action-btn danger" onclick="confirmResetData()"><i class="fas fa-trash-alt"></i> Reset All Data (Students + Marks)</button>
+                        <button class="action-btn primary" onclick="exportAllData()"><i class="fas fa-download"></i> Backup Data</button>
+                    </div>
+                    <div class="warning-box" style="margin-top:15px;">
+                        <small><i class="fas fa-info-circle"></i> <strong>Clear All Marks Only:</strong> Removes all scores but keeps student names and details.</small>
+                    </div>
+                </div>
+                <button class="action-btn primary" onclick="saveSettings()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Settings</button>
+            </div>
+        </div>
+
+        <footer><p><i class="fas fa-copyright"></i> 2024 EduNexa Ultimate - Complete CBE School Management System | Kenya</p></footer>
+    </div>
+
+    <div id="reportModal" class="report-modal"><div class="report-content" id="reportContent"></div></div>
+    <div id="addStudentModal" class="modal"><div class="modal-content" style="max-width:500px;"><h3><i class="fas fa-user-plus"></i> Add/Edit Student</h3>
+        <input type="text" id="newStudentName" placeholder="Full Name" style="width:100%; margin:10px 0; padding:12px;">
+        <input type="text" id="newAdmissionNo" placeholder="Assessment Number" style="width:100%; margin:10px 0; padding:12px;">
+        <div style="display:flex; gap:10px;"><select id="newClass" style="flex:1; padding:12px;"><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option></select><select id="newStream" style="flex:1; padding:12px;"><option>North</option><option>South</option><option>East</option><option>West</option></select></div>
+        <input type="tel" id="newParentPhone" placeholder="Parent Phone" style="width:100%; margin:10px 0; padding:12px;">
+        <div style="display:flex; gap:10px; margin-top:20px;"><button class="action-btn primary" onclick="addStudent()"><i class="fas fa-save"></i> Save Student</button><button class="action-btn" onclick="closeModal('addStudentModal')">Cancel</button></div>
+    </div></div>
+
+    <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div><div id="loadingMessage">Loading...</div></div>
+    <div id="saveIndicator" class="save-indicator"><i class="fas fa-check-circle"></i> Saved!</div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDrl4NXoDMygB8JBvffWex6owEf2y8_bjI", authDomain: "edunexa-cf19f.firebaseapp.com", projectId: "edunexa-cf19f", storageBucket: "edunexa-cf19f.firebasestorage.app", messagingSenderId: "298034513849", appId: "1:298034513849:web:8a17d29307dd1a86ed1868" };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Password visibility toggle function
+        function togglePassword(fieldId, iconElement) {
+            const passwordField = document.getElementById(fieldId);
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                iconElement.classList.remove("fa-eye");
+                iconElement.classList.add("fa-eye-slash");
+            } else {
+                passwordField.type = "password";
+                iconElement.classList.remove("fa-eye-slash");
+                iconElement.classList.add("fa-eye");
+            }
+        }
+
+        const CBE_SUBJECTS = {
+            lower: { count: 7, areas: ["English", "Kiswahili", "Mathematics", "Environmental Activities", "Creative Arts", "Religious Education", "Physical & Health Education"], gradeRange: "Grade 1-3" },
+            upper: { count: 8, areas: ["English", "Kiswahili", "Mathematics", "Science & Technology", "Social Studies", "Religious Education", "Creative Arts", "Physical & Health Education"], gradeRange: "Grade 4-6" },
+            junior: { count: 9, areas: ["English", "Kiswahili", "Mathematics", "Integrated Science", "Social Studies", "Religious Education", "Agriculture & Nutrition", "Pre-Technical & Pre-Career Studies", "Creative Arts & Sports"], gradeRange: "Grade 7-9" }
+        };
+
+        function getSubjectsForGrade(grade) {
+            let gradeNum = parseInt(grade.split(" ")[1]);
+            if (gradeNum >= 1 && gradeNum <= 3) return CBE_SUBJECTS.lower;
+            if (gradeNum >= 4 && gradeNum <= 6) return CBE_SUBJECTS.upper;
+            return CBE_SUBJECTS.junior;
+        }
+
+        function getPerformanceLevel(score) {
+            if (score >= 80) return { level: "EE", name: "Exceed Expectation", points: 4 };
+            if (score >= 60) return { level: "ME", name: "Meeting Expectation", points: 3 };
+            if (score >= 40) return { level: "AE", name: "Approach Expectation", points: 2 };
+            return { level: "BE", name: "Below Expectation", points: 1 };
+        }
+
+        function getCBEGrade(p) { 
+            if (p >= 90) return { code: "EE1", name: "Exceptional", color: "#1b5e20" }; 
+            if (p >= 75) return { code: "EE2", name: "Very Good", color: "#2e7d32" }; 
+            if (p >= 58) return { code: "ME1", name: "Good", color: "#558b2f" }; 
+            if (p >= 41) return { code: "ME2", name: "Fair", color: "#8bc34a" }; 
+            if (p >= 31) return { code: "AE1", name: "Needs Improvement", color: "#ffb74d" }; 
+            if (p >= 21) return { code: "AE2", name: "Below Average", color: "#ff8a65" }; 
+            if (p >= 11) return { code: "BE1", name: "Well Below", color: "#ef5350" }; 
+            return { code: "BE2", name: "Minimal", color: "#c62828" }; 
+        }
+
+        let currentUser = null, students = [], schoolLogo = null, schoolSettings = { name: "EduNexa Academy", motto: "Excellence in CBE Education", term: "Term 2", year: "2024" };
+        let currentStreamFilter = "North";
+        let currentAnalysisClass = "Grade 1";
+        let sessionToken = null;
+        let saveTimeout = null;
+        
+        function showLoading(msg) { document.getElementById("loadingMessage").innerText = msg; document.getElementById("loadingOverlay").style.display = "flex"; }
+        function hideLoading() { document.getElementById("loadingOverlay").style.display = "none"; }
+        
+        function showToast(msg, isError = false) { 
+            const t = document.createElement('div'); 
+            t.className = 'toast'; 
+            t.style.background = isError ? '#e74c3c' : '#2b5e2b'; 
+            t.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`; 
+            document.body.appendChild(t); 
+            setTimeout(() => t.remove(), 3000); 
+        }
+        
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => { indicator.style.display = 'none'; }, 1500);
+        }
+        
+        function sanitizeInput(str) { if (!str) return ''; return str.replace(/[^a-zA-Z0-9\s\-\.\@\(\)]/g, '').substring(0, 100); }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+        
+        function avg(s) { const vals = Object.values(s.marks || {}); return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0; }
+        function total(s) { return Object.values(s.marks || {}).reduce((a,b)=>a+b,0); }
+        
+        function getMark(s, area) { 
+            const key = area.toLowerCase().replace(/[^a-z]/g, '');
+            return (s.marks && s.marks[key]) !== undefined ? s.marks[key] : 0; 
+        }
+        
+        function setMark(s, area, val) { 
+            const key = area.toLowerCase().replace(/[^a-z]/g, '');
+            if (!s.marks) s.marks = {}; 
+            s.marks[key] = val; 
+        }
+
+        function updateClassOptions() {
+            const className = document.getElementById("examClass").value;
+            const subjects = getSubjectsForGrade(className);
+            const infoDiv = document.getElementById("subjectInfo");
+            infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> <strong>${subjects.count} Learning Areas</strong> - ${subjects.gradeRange}`;
+        }
+
+        function loadMarksEntry() { 
+            const className = document.getElementById("examClass").value; 
+            const stream = document.getElementById("examStream").value; 
+            const subjects = getSubjectsForGrade(className);
+            const areas = subjects.areas;
+            const filtered = students.filter(s => s.class === className && s.stream === stream); 
+            
+            updateClassOptions();
+            
+            if (filtered.length === 0) { 
+                document.getElementById("marksEntryContainer").innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-info-circle" style="font-size:48px; color:#ccc;"></i><p>No students found in ${className} - ${stream}. Add students first!</p></div>`; 
+                return; 
+            } 
+            
+            let html = `<div class="table-wrapper"><table class="data-table"><thead>`;
+            html += `<tr><th>#</th><th>Student Name</th><th>Assessment No</th>`;
+            areas.forEach(a => { html += `<th>${a.substring(0,12)}</th>`; });
+            html += `<th>Total</th><th>Avg%</th><th>Grade</th></tr></thead><tbody>`;
+            
+            filtered.forEach((s, idx) => { 
+                html += `<tr>
+                    <td>${idx + 1}</td>
+                    <td><strong>${escapeHtml(s.name)}</strong></td>
+                    <td>${escapeHtml(s.admNo)}</td>`;
+                areas.forEach(area => { 
+                    let mark = getMark(s, area); 
+                    html += `<td><input type="number" class="mark-input" data-student-id="${s.id}" data-area="${area}" value="${mark}" min="0" max="100" step="1"></td>`; 
+                }); 
+                const tot = total(s); 
+                const av = avg(s); 
+                const g = getCBEGrade(av); 
+                html += `<td><strong>${tot}</strong></td>
+                        <td><strong>${av.toFixed(1)}%</strong></td>
+                        <td><span class="grade-badge" style="background:${g.color};">${g.code}</span></td>
+                    </tr>`; 
+            }); 
+            html += `</tbody></table></div>`; 
+            document.getElementById("marksEntryContainer").innerHTML = html; 
+            
+            document.querySelectorAll('.mark-input').forEach(inp => { 
+                inp.addEventListener('change', async function(e) { 
+                    const studentId = parseInt(this.dataset.studentId); 
+                    const area = this.dataset.area; 
+                    let val = parseInt(this.value); 
+                    if (isNaN(val)) val = 0; 
+                    val = Math.min(100, Math.max(0, val)); 
+                    
+                    const student = students.find(s => s.id === studentId);
+                    if (student) {
+                        setMark(student, area, val);
+                        showSaveIndicator();
+                        if (saveTimeout) clearTimeout(saveTimeout);
+                        saveTimeout = setTimeout(async () => {
+                            await saveToFirebase();
+                            loadDashboard();
+                        }, 500);
+                    }
+                }); 
+            }); 
+        }
+        
+        async function saveAllMarks() { await saveToFirebase(); showToast("✅ All marks saved to cloud!"); loadDashboard(); }
+        
+        function quickFillMarks() { 
+            const className = document.getElementById("examClass").value; 
+            const stream = document.getElementById("examStream").value; 
+            const subjects = getSubjectsForGrade(className);
+            const filtered = students.filter(s => s.class === className && s.stream === stream); 
+            filtered.forEach(s => { subjects.areas.forEach(area => { setMark(s, area, 50); }); }); 
+            saveToFirebase(); loadMarksEntry(); loadDashboard();
+            showToast("Quick fill completed! All marks set to 50%"); 
+        }
+        
+        async function confirmClearAllMarks() {
+            const totalStudents = students.length;
+            const userInput = prompt(`⚠️ CLEAR ALL MARKS ONLY ⚠️\n\nThis will remove ALL marks/scores from ${totalStudents} student(s).\n\nType "CLEAR MARKS" to confirm.`);
+            if (userInput === "CLEAR MARKS") {
+                showLoading("Clearing all marks...");
+                try {
+                    for (let student of students) {
+                        const subjects = getSubjectsForGrade(student.class);
+                        for (let area of subjects.areas) { setMark(student, area, 0); }
+                    }
+                    await saveToFirebase();
+                    hideLoading();
+                    showToast(`✅ Cleared marks for ${totalStudents} students!`);
+                    loadDashboard();
+                    if (document.getElementById("marksSection").style.display === "block") loadMarksEntry();
+                } catch (e) { hideLoading(); showToast("Error: " + e.message, true); }
+            }
+        }
+
+        async function signup() { 
+            const name = sanitizeInput(document.getElementById("signupSchoolName").value.trim());
+            const location = sanitizeInput(document.getElementById("signupLocation").value.trim());
+            const email = document.getElementById("signupEmail").value.trim();
+            const phone = document.getElementById("signupPhone").value.trim();
+            const pwd = document.getElementById("signupPassword").value;
+            if (!name || !location || !email || !phone || !pwd) { alert("Please fill all fields"); return; }
+            if (pwd.length < 6) { alert("Password must be 6+ characters"); return; }
+            showLoading("Creating account...");
+            try { 
+                const user = await auth.createUserWithEmailAndPassword(email, pwd); 
+                await db.collection("schools").doc(user.user.uid).set({ name, location, email, phone, students: [], settings: schoolSettings, createdAt: new Date().toISOString() }); 
+                hideLoading(); 
+                alert("School registered successfully! Please login."); 
+                showLogin(); 
+            } catch (e) { hideLoading(); alert("Error: " + e.message); } 
+        }
+        
+        async function login() { 
+            const email = document.getElementById("loginEmail").value.trim();
+            const pwd = document.getElementById("loginPassword").value;
+            if (!email || !pwd) { alert("Enter email and password"); return; }
+            showLoading("Logging in...");
+            try { 
+                const user = await auth.signInWithEmailAndPassword(email, pwd); 
+                currentUser = user.user;
+                sessionToken = Date.now().toString();
+                const doc = await db.collection("schools").doc(currentUser.uid).get(); 
+                if (doc.exists) { 
+                    const data = doc.data(); 
+                    students = data.students || []; 
+                    if (data.settings) schoolSettings = data.settings; 
+                    document.getElementById("schoolName").innerText = schoolSettings.name; 
+                    document.getElementById("termDisplay").innerText = `${schoolSettings.term}, ${schoolSettings.year}`; 
+                    document.getElementById("settingsSchoolName").value = schoolSettings.name; 
+                    document.getElementById("settingsMotto").value = schoolSettings.motto; 
+                    document.getElementById("settingsTerm").value = schoolSettings.term; 
+                    document.getElementById("settingsYear").value = schoolSettings.year; 
+                } 
+                document.getElementById("authSection").style.display = "none"; 
+                document.getElementById("mainApp").style.display = "block"; 
+                loadDashboard(); 
+                hideLoading(); 
+                showToast(`Welcome back to ${schoolSettings.name}!`); 
+            } catch (e) { hideLoading(); alert("Login failed: " + e.message); } 
+        }
+        
+        async function logout() { 
+            await auth.signOut(); 
+            currentUser = null; 
+            sessionToken = null;
+            students = []; 
+            document.getElementById("authSection").style.display = "block"; 
+            document.getElementById("mainApp").style.display = "none"; 
+            showToast("Logged out successfully"); 
+        }
+        
+        async function saveToFirebase() { 
+            if (currentUser && sessionToken) { 
+                await db.collection("schools").doc(currentUser.uid).update({ students, settings: schoolSettings, lastUpdated: new Date().toISOString() }); 
+            } 
+        }
+
+        function loadDashboard() { 
+            const total = students.length; 
+            const classes = [...new Set(students.map(s => s.class))]; 
+            let allAvgs = students.map(s => avg(s)); 
+            const classAvg = allAvgs.length ? (allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length).toFixed(1) : 0; 
+            const top = [...students].sort((a,b) => avg(b) - avg(a))[0]; 
+            document.getElementById("totalStudents").innerText = total; 
+            document.getElementById("totalClasses").innerText = classes.length; 
+            document.getElementById("classAvg").innerText = classAvg + "%"; 
+            document.getElementById("topStudentName").innerText = top ? top.name : "-"; 
+            const top5 = [...students].sort((a,b) => avg(b) - avg(a)).slice(0,5); 
+            let html = ""; 
+            top5.forEach((s, i) => { const a = avg(s).toFixed(1); const g = getCBEGrade(a); let perf = a >= 75 ? "Excellent" : a >= 58 ? "Good" : a >= 41 ? "Fair" : "Needs Support"; html += `<tr style="${i===0?'background:#fff9c4':''}"><td><span class="rank-badge ${i===0?'rank-1':''}">${i+1}</span></td><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.class}</td><td>${s.stream}</td><td><strong>${a}%</strong></td><td><span class="grade-badge" style="background:${g.color};">${g.code}</span></td><td>${perf}</td>`; }); 
+            document.getElementById("topPerformersBody").innerHTML = html; 
+        }
+
+        function filterStudents() { 
+            const search = document.getElementById("studentSearch").value.toLowerCase(); 
+            const classFilter = document.getElementById("filterClass").value; 
+            let filtered = students.filter(s => (s.name.toLowerCase().includes(search) || s.admNo.toLowerCase().includes(search)) && (classFilter === "" || s.class === classFilter)); 
+            let html = ""; 
+            filtered.forEach((s, i) => { const av = avg(s).toFixed(1); html += `<tr>
+                <td>${i+1}</td>
+                <td>${escapeHtml(s.admNo)}</td>
+                <td><strong>${escapeHtml(s.name)}</strong></td>
+                <td>${s.class}</td>
+                <td>${s.stream}</td>
+                <td>${s.parentPhone || '-'}</td>
+                <td>${av}%</td>
+                <td><i class="fas fa-edit edit-btn" onclick="editStudent(${students.indexOf(s)})"></i> <i class="fas fa-trash delete-btn" onclick="deleteStudent(${students.indexOf(s)})"></i></td>
+            </td>`; }); 
+            document.getElementById("studentsListBody").innerHTML = html; 
+            document.getElementById("studentCount").innerHTML = `📊 ${filtered.length} students`; 
+        }
+        
+        function loadStudentsList() { filterStudents(); }
+        
+        function editStudent(idx) { const s = students[idx]; document.getElementById("newStudentName").value = s.name; document.getElementById("newAdmissionNo").value = s.admNo; document.getElementById("newClass").value = s.class; document.getElementById("newStream").value = s.stream; document.getElementById("newParentPhone").value = s.parentPhone || ''; openAddStudentModal(); window.editIndex = idx; }
+        
+        async function addStudent() { 
+            const name = sanitizeInput(document.getElementById("newStudentName").value.trim()); 
+            if (!name) { alert("Enter student name"); return; } 
+            const selectedClass = document.getElementById("newClass").value;
+            const subjects = getSubjectsForGrade(selectedClass);
+            const newStudent = { id: Date.now(), admNo: sanitizeInput(document.getElementById("newAdmissionNo").value.trim()) || `ASM${Date.now()}`, name: name, class: selectedClass, stream: document.getElementById("newStream").value, parentPhone: sanitizeInput(document.getElementById("newParentPhone").value.trim()), marks: {} }; 
+            subjects.areas.forEach(area => { setMark(newStudent, area, 0); });
+            if (window.editIndex !== undefined) { students[window.editIndex] = newStudent; delete window.editIndex; showToast("Student updated!"); } 
+            else { students.push(newStudent); showToast("Student added!"); } 
+            await saveToFirebase(); 
+            closeModal("addStudentModal"); 
+            loadStudentsList(); 
+            loadDashboard(); 
+        }
+        
+        async function deleteStudent(idx) { if (confirm("⚠️ Delete this student permanently?")) { students.splice(idx, 1); await saveToFirebase(); loadStudentsList(); loadDashboard(); showToast("Student deleted"); } }
+        
+        function loadRankings() { 
+            const className = document.getElementById("rankClass").value; 
+            const subjects = getSubjectsForGrade(className);
+            const areas = subjects.areas;
+            const filtered = students.filter(s => s.class === className); 
+            const ranked = filtered.map(s => ({ name: s.name, stream: s.stream, avg: avg(s), student: s })).sort((a,b) => b.avg - a.avg); 
+            if (ranked.length === 0) { document.getElementById("rankingsContainer").innerHTML = `<div style="text-align:center; padding:40px;"><p>No students in ${className}</p></div>`; return; } 
+            let html = `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Pos</th><th>Name</th><th>Stream</th>`;
+            areas.forEach(a => { html += `<th>${a.substring(0,8)}</th>`; });
+            html += `<th>Total</th><th>Avg%</th><th>Grade</th><th>Remark</th></tr></thead><tbody>`;
+            ranked.forEach((s, i) => { const isFirst = i === 0; const g = getCBEGrade(s.avg); let remark = s.avg >= 75 ? "Excellent" : s.avg >= 58 ? "Good" : s.avg >= 41 ? "Fair" : "Needs Support"; html += `<tr style="${isFirst?'background:#fff9c4':''}"><td><span class="rank-badge ${isFirst?'rank-1':''}">${i+1}</span></td><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.stream}</td>`; areas.forEach(area => { html += `<td>${getMark(s.student, area)}</td>`; }); html += `<td><strong>${total(s.student)}</strong></td><td><strong>${s.avg.toFixed(1)}%</strong></td><td><span class="grade-badge" style="background:${g.color};">${g.code}</span></td><td>${remark}</td></tr>`; });
+            html += `</tbody></table></div>`;
+            document.getElementById("rankingsContainer").innerHTML = html; 
+        }
+
+        function loadStreamAnalysis() { currentAnalysisClass = document.getElementById("analysisClass").value; filterStreamAnalysis(currentStreamFilter); }
+        
+        function filterStreamAnalysis(stream) {
+            currentStreamFilter = stream;
+            const className = currentAnalysisClass;
+            const subjects = getSubjectsForGrade(className);
+            const areas = subjects.areas;
+            let filteredStudents = students.filter(s => s.class === className);
+            if (stream !== 'all') { filteredStudents = filteredStudents.filter(s => s.stream === stream); document.getElementById("streamTitle").innerHTML = `📊 ${stream.toUpperCase()} STREAM ANALYSIS - ${className}`; } 
+            else { document.getElementById("streamTitle").innerHTML = `📊 OVERALL ANALYSIS - ${className}`; }
+            const ranked = filteredStudents.map(s => ({ name: s.name, stream: s.stream, avg: avg(s), student: s })).sort((a,b) => b.avg - a.avg);
+            const streamAvg = ranked.length ? ranked.reduce((sum, s) => sum + s.avg, 0) / ranked.length : 0;
+            const topStudent = ranked.length ? ranked[0] : null;
+            const gradeDist = { "EE1":0,"EE2":0,"ME1":0,"ME2":0,"AE1":0,"AE2":0,"BE1":0,"BE2":0 };
+            ranked.forEach(s => { const g = getCBEGrade(s.avg); gradeDist[g.code]++; });
+            document.getElementById("streamStats").innerHTML = `👨‍🎓 Students: ${ranked.length} | 📈 Average: ${streamAvg.toFixed(1)}% | 🏆 Top: ${topStudent ? topStudent.name : 'N/A'}`;
+            
+            let rankingsHtml = `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Pos</th><th>Name</th><th>Stream</th>`;
+            areas.forEach(a => { rankingsHtml += `<th>${a.substring(0,8)}</th>`; });
+            rankingsHtml += `<th>Total</th><th>Avg%</th><th>Grade</th></tr></thead><tbody>`;
+            ranked.forEach((s, i) => { const g = getCBEGrade(s.avg); const isFirst = i === 0; rankingsHtml += `<tr style="${isFirst?'background:#fff9c4':''}"><td><span class="rank-badge ${isFirst?'rank-1':''}">${i+1}</span></td><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.stream}</td>`; areas.forEach(area => { rankingsHtml += `<td>${getMark(s.student, area)}</td>`; }); rankingsHtml += `<td><strong>${total(s.student)}</strong></td><td><strong>${s.avg.toFixed(1)}%</strong></td><td><span class="grade-badge" style="background:${g.color};">${g.code}</span></td></tr>`; });
+            rankingsHtml += `</tbody></table></div>`;
+            document.getElementById("streamRankingsContainer").innerHTML = rankingsHtml;
+            
+            let gradeHtml = ""; for (let [code, count] of Object.entries(gradeDist)) { const percent = ranked.length ? ((count/ranked.length)*100).toFixed(1) : 0; gradeHtml += `<div style="background:#f8f9fa; padding:15px; border-radius:12px; text-align:center;"><strong>${code}</strong><br><span style="font-size:24px; font-weight:bold;">${count}</span><br><small>${percent}%</small></div>`; }
+            document.getElementById("gradeDistributionContainer").innerHTML = gradeHtml;
+            
+            const streams = ['North', 'South', 'East', 'West'];
+            let comparisonHtml = "";
+            streams.forEach(str => { const streamStudents = students.filter(s => s.class === className && s.stream === str); const strAvg = streamStudents.length ? streamStudents.reduce((sum, s) => sum + avg(s), 0) / streamStudents.length : 0; const strGrade = getCBEGrade(strAvg); const strTop = streamStudents.length ? streamStudents.sort((a,b) => avg(b)-avg(a))[0] : null; let bgColor = "#f8f9fa"; if (str === 'North') bgColor = "#e3f2fd"; if (str === 'South') bgColor = "#ffebee"; if (str === 'East') bgColor = "#e8f5e9"; if (str === 'West') bgColor = "#fff3e0"; comparisonHtml += `<div class="stream-card" style="background:${bgColor};"><h4>${str} Stream</h4><p><strong>Students:</strong> ${streamStudents.length}</p><p><strong>Average:</strong> ${strAvg.toFixed(1)}%</p><p><strong>Grade:</strong> <span class="grade-badge" style="background:${strGrade.color};">${strGrade.code}</span></p><p><strong>Top:</strong> ${strTop ? strTop.name.substring(0,15) : '-'}</p></div>`; });
+            document.getElementById("streamComparisonContainer").innerHTML = comparisonHtml;
+        }
+
+        function generateDetailedReportCard(student, streamStudents, allStudents) {
+            const grade = student.class;
+            const subjects = getSubjectsForGrade(grade);
+            const streamRank = streamStudents.filter(s => avg(s) > avg(student)).length + 1;
+            const overallRank = allStudents.filter(s => avg(s) > avg(student)).length + 1;
+            const totalMarks = total(student);
+            const maxTotal = subjects.count * 100;
+            const average = avg(student).toFixed(1);
+            const gradeInfo = getCBEGrade(average);
+            
+            let subjectsHtml = "";
+            for (let area of subjects.areas) {
+                const score = getMark(student, area);
+                const level = getPerformanceLevel(score);
+                subjectsHtml += `<tr>
+                    <td>${area}</td>
+                    <td><strong>${score}</strong></td>
+                    <td style="text-align:center">${level.points >= 4 ? '✓' : ''}</td>
+                    <td style="text-align:center">${level.points === 3 ? '✓' : ''}</td>
+                    <td style="text-align:center">${level.points === 2 ? '✓' : ''}</td>
+                    <td style="text-align:center">${level.points === 1 ? '✓' : ''}</td>
+                    <td>${level.name}</td>
+                </tr>`;
+            }
+            
+            let comment = "";
+            if (average >= 80) comment = "Excellent performance! Keep up the great work!";
+            else if (average >= 60) comment = "Good performance. Meeting expectations.";
+            else if (average >= 40) comment = "Satisfactory. Approaching expectations. More effort needed.";
+            else comment = "Needs significant improvement. Please work harder.";
+            
+            return `
+                <div class="report-card" style="font-family: Arial, sans-serif; margin-bottom: 30px; page-break-after: always;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        ${schoolLogo ? `<img src="${schoolLogo}" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 10px;">` : ''}
+                        <div class="report-title">${escapeHtml(schoolSettings.name)}</div>
+                        <div class="report-subtitle">${escapeHtml(schoolSettings.motto)}</div>
+                        <div class="report-subtitle" style="font-size: 18px; font-weight: bold;">${student.class} - ${schoolSettings.term} ${schoolSettings.year}</div>
+                        <div class="report-subtitle" style="font-size: 16px;">ASSESSMENT SUMMARY REPORT</div>
+                    </div>
+                    
+                    <div class="student-info-grid">
+                        <div><span class="info-label">NAME OF THE LEARNER:</span> ${escapeHtml(student.name)}</div>
+                        <div><span class="info-label">ASSESSMENT NO:</span> ${student.admNo}</div>
+                        <div><span class="info-label">STREAM:</span> ${student.stream}</div>
+                        <div><span class="info-label">CLASS TEACHER:</span> _________________</div>
+                    </div>
+                    
+                    <div class="performance-levels">
+                        <div class="level-card level-ee"><strong>EE</strong><br>Exceed Expectation<br>80-100%</div>
+                        <div class="level-card level-me"><strong>ME</strong><br>Meeting Expectation<br>60-79%</div>
+                        <div class="level-card level-ae"><strong>AE</strong><br>Approach Expectation<br>40-59%</div>
+                        <div class="level-card level-be"><strong>BE</strong><br>Below Expectation<br>Below 40%</div>
+                    </div>
+                    
+                    <table class="subjects-table">
+                        <thead>
+                            <tr><th>LEARNING AREAS</th><th>SCORES</th><th>EE(4)</th><th>ME(3)</th><th>AE(2)</th><th>BE(1)</th><th>REMARKS</th></tr>
+                        </thead>
+                        <tbody>${subjectsHtml}</tbody>
+                    </table>
+                    
+                    <div class="total-section">
+                        <div><strong>TOTAL SCORE:</strong> ${totalMarks}</div>
+                        <div><strong>OUT OF:</strong> ${maxTotal}</div>
+                        <div><strong>AVERAGE:</strong> ${average}%</div>
+                        <div><strong>POSITION IN STREAM:</strong> ${streamRank}</div>
+                        <div><strong>OUT OF:</strong> ${streamStudents.length}</div>
+                        <div><strong>OVERALL POSITION:</strong> ${overallRank}</div>
+                        <div><strong>OUT OF:</strong> ${allStudents.length}</div>
+                        <div><strong>GRADE:</strong> <span class="grade-badge" style="background:${gradeInfo.color};">${gradeInfo.code}</span></div>
+                        <div><strong>PERFORMANCE:</strong> ${gradeInfo.name}</div>
+                    </div>
+                    
+                    <div class="comments-section">
+                        <p><strong>GENERAL COMMENTS:</strong> ${comment}</p>
+                    </div>
+                    
+                    <div class="signatures">
+                        <div>CLASS TEACHER'S SIGN: _______________</div>
+                        <div>H.O.I SIGN: _______________</div>
+                        <div>ACADEMIC COMMITTEE: _______________</div>
+                    </div>
+                    
+                    <div class="date-row">
+                        <div>OPENING DATE: _______________</div>
+                        <div>CLOSING DATE: _______________</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function generateClassReportCards() {
+            const className = document.getElementById("reportClass").value;
+            const streamFilter = document.getElementById("reportStream").value;
+            
+            let filteredStudents = students.filter(s => s.class === className);
+            if (streamFilter !== "all") { filteredStudents = filteredStudents.filter(s => s.stream === streamFilter); }
+            
+            const streamStudents = filteredStudents;
+            const allClassStudents = students.filter(s => s.class === className);
+            
+            if (filteredStudents.length === 0) { alert(`No students found in ${className} ${streamFilter !== "all" ? "- " + streamFilter : ""}`); return; }
+            
+            const modal = document.getElementById("reportModal");
+            const content = document.getElementById("reportContent");
+            
+            let allReports = `<div style="text-align: center; margin-bottom: 20px;">
+                <h2>${escapeHtml(schoolSettings.name)}</h2>
+                <h3>${className} - ${schoolSettings.term} ${schoolSettings.year}</h3>
+                <p>Generated: ${new Date().toLocaleString()}</p>
+                <hr>
+                <div style="margin: 15px 0;"><button class="action-btn primary" onclick="window.print()"><i class="fas fa-print"></i> Print All Reports</button> <button class="action-btn" onclick="closeModal('reportModal')">Close</button></div>
+            </div>`;
+            
+            for (let student of filteredStudents) { allReports += generateDetailedReportCard(student, streamStudents, allClassStudents); }
+            
+            content.innerHTML = allReports;
+            modal.style.display = "flex";
+        }
+        
+        function openReportModal(type) { 
+            const modal = document.getElementById("reportModal"); 
+            const content = document.getElementById("reportContent"); 
+            if (type === 'class') {
+                const className = document.getElementById("rankClass").value; 
+                const subjects = getSubjectsForGrade(className);
+                const filtered = students.filter(s => s.class === className); 
+                const ranked = filtered.map(s => ({ name: s.name, stream: s.stream, avg: avg(s) })).sort((a,b) => b.avg - a.avg); 
+                const classAvg = ranked.length ? ranked.reduce((s, r) => s + r.avg, 0) / ranked.length : 0; 
+                let rows = ""; 
+                ranked.forEach((s, i) => { const g = getCBEGrade(s.avg); rows += `<tr><td>${i+1}<td>${escapeHtml(s.name)}</td amoeba${s.stream}</td><td>${s.avg.toFixed(1)}%</td amoeba<span class="grade-badge" style="background:${g.color};">${g.code}</span></td></tr>`; }); 
+                content.innerHTML = `<div class="report-header">${schoolLogo ? `<img src="${schoolLogo}" class="school-logo-preview">` : ''}<h2>${escapeHtml(schoolSettings.name)}</h2><p>${escapeHtml(schoolSettings.motto)}</p><h3>${className} - Class Performance Report</h3><p>${subjects.count} Learning Areas</p></div><div style="margin:20px 0; padding:15px; background:#f8f9fa;"><p><strong>Total Students:</strong> ${ranked.length}</p><p><strong>Class Average:</strong> ${classAvg.toFixed(1)}%</p></div><table class="data-table"><thead><tr><th>Pos</th><th>Name</th><th>Stream</th><th>Avg%</th><th>Grade</th></tr></thead><tbody>${rows}</tbody></table><div style="margin-top:20px; text-align:center;"><button class="action-btn primary" onclick="window.print()">Print Report</button><button class="action-btn" onclick="closeModal('reportModal')">Close</button></div>`; 
+            } else if (type === 'student') {
+                let opts = ""; students.forEach((s, i) => { opts += `<option value="${i}">${escapeHtml(s.name)} (${s.admNo})</option>`; }); 
+                content.innerHTML = `<div class="report-header">${schoolLogo ? `<img src="${schoolLogo}" class="school-logo-preview">` : ''}<h2>${escapeHtml(schoolSettings.name)}</h2><p>${escapeHtml(schoolSettings.motto)}</p><h3>Select Student</h3></div><select id="studentSelect" style="width:100%; padding:12px; margin:15px 0;">${opts}</select><button class="action-btn primary" onclick="showSingleStudentReport()">Generate Report Card</button><button class="action-btn" onclick="closeModal('reportModal')" style="margin-top:15px;">Close</button>`; 
+            } else if (type === 'subject') {
+                const subjectsList = ["English", "Kiswahili", "Mathematics", "Integrated Science"]; 
+                let rows = ""; 
+                subjectsList.forEach(sub => { let totalMarks = 0, count = 0; students.forEach(s => { let mark = getMark(s, sub); if (mark > 0) { totalMarks += mark; count++; } }); let avgMark = count ? totalMarks / count : 0; let grade = getCBEGrade(avgMark); rows += `<tr><td>${sub}</td><td>${avgMark.toFixed(1)}%</td amoeba<span class="grade-badge" style="background:${grade.color};">${grade.code}</span></td><td>${grade.name}</td></tr>`; }); 
+                content.innerHTML = `<div class="report-header">${schoolLogo ? `<img src="${schoolLogo}" class="school-logo-preview">` : ''}<h2>${escapeHtml(schoolSettings.name)}</h2><p>${escapeHtml(schoolSettings.motto)}</p><h3>Subject Analysis</h3></div><table class="data-table"><thead><tr><th>Learning Area</th><th>School Average</th><th>Grade</th><th>Performance</th></tr></thead><tbody>${rows}</tbody><tr><div style="margin-top:20px; text-align:center;"><button class="action-btn primary" onclick="window.print()">Print</button><button class="action-btn" onclick="closeModal('reportModal')">Close</button></div>`; 
+            } else if (type === 'summary') {
+                const total = students.length; const avgAll = total ? students.reduce((s,st) => s + avg(st), 0)/total : 0; const gradeDist = { "EE1":0,"EE2":0,"ME1":0,"ME2":0,"AE1":0,"AE2":0,"BE1":0,"BE2":0 }; students.forEach(s => { const g = getCBEGrade(avg(s)); gradeDist[g.code]++; }); let distHtml = ""; for (let [code, count] of Object.entries(gradeDist)) { distHtml += `<tr><td>${code}</td><td>${count}</td><td>${total ? ((count/total)*100).toFixed(1) : 0}%</td</tr>`; } content.innerHTML = `<div class="report-header">${schoolLogo ? `<img src="${schoolLogo}" class="school-logo-preview">` : ''}<h2>${escapeHtml(schoolSettings.name)}</h2><p>${escapeHtml(schoolSettings.motto)}</p><h3>School Summary Report</h3><p>${schoolSettings.term}, ${schoolSettings.year}</p></div><div style="margin:20px 0; padding:15px; background:#f8f9fa;"><p><strong>Total Enrollment:</strong> ${total} students</p><p><strong>School Average:</strong> ${avgAll.toFixed(1)}%</p><p><strong>Performance Level:</strong> ${getCBEGrade(avgAll).name}</p></div><h4>Grade Distribution</h4><table class="data-table"><thead><tr><th>Grade</th><th>Students</th><th>Percentage</th></tr></thead><tbody>${distHtml}</tbody></table><div style="margin-top:20px; text-align:center;"><button class="action-btn primary" onclick="window.print()">Print Summary</button><button class="action-btn" onclick="closeModal('reportModal')">Close</button></div>`; 
+            }
+            modal.style.display = "flex"; 
+        }
+        
+        function showSingleStudentReport() {
+            const idx = document.getElementById("studentSelect").value;
+            const student = students[idx];
+            if (!student) return;
+            const streamStudents = students.filter(s => s.class === student.class && s.stream === student.stream);
+            const allClassStudents = students.filter(s => s.class === student.class);
+            const modal = document.getElementById("reportModal");
+            const content = document.getElementById("reportContent");
+            content.innerHTML = generateDetailedReportCard(student, streamStudents, allClassStudents);
+        }
+        
+        function closeModal(id) { document.getElementById(id).style.display = "none"; window.editIndex = undefined; }
+        
+        function exportAllData() { 
+            const data = students.map(s => ({ "Assessment Number": s.admNo, "Name": s.name, "Class": s.class, "Stream": s.stream, "Average": avg(s).toFixed(1), "Grade": getCBEGrade(avg(s)).code })); 
+            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, ws, `${schoolSettings.name}_Data`); 
+            XLSX.writeFile(wb, `${schoolSettings.name.replace(/\s/g,'_')}_${schoolSettings.term}_${schoolSettings.year}_Data.xlsx`); 
+            showToast("Data exported!"); 
+        }
+        
+        function exportToExcel(type) { 
+            if (type === 'students') { 
+                const data = students.map(s => ({ "Assessment Number": s.admNo, "Name": s.name, "Class": s.class, "Stream": s.stream, "Average": avg(s).toFixed(1) })); 
+                const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, "Students"); 
+                XLSX.writeFile(wb, `${schoolSettings.name.replace(/\s/g,'_')}_Students_${Date.now()}.xlsx`); 
+                showToast("Students exported!"); 
+            } else if (type === 'rankings') { 
+                const className = document.getElementById("rankClass").value; 
+                const filtered = students.filter(s => s.class === className); 
+                const ranked = filtered.map(s => ({ "Position": 0, "Name": s.name, "Stream": s.stream, "Average": avg(s).toFixed(1), "Grade": getCBEGrade(avg(s)).code })).sort((a,b) => b.Average - a.Average); 
+                ranked.forEach((r, i) => r.Position = i + 1); 
+                const ws = XLSX.utils.json_to_sheet(ranked); const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, "Rankings"); 
+                XLSX.writeFile(wb, `${schoolSettings.name.replace(/\s/g,'_')}_${className}_Rankings.xlsx`); 
+                showToast("Rankings exported!"); 
+            } 
+        }
+        
+        function openAddStudentModal() { document.getElementById("addStudentModal").style.display = "flex"; window.editIndex = undefined; document.getElementById("newStudentName").value = ""; document.getElementById("newAdmissionNo").value = ""; document.getElementById("newParentPhone").value = ""; }
+        
+        async function saveSettings() { 
+            schoolSettings.name = sanitizeInput(document.getElementById("settingsSchoolName").value); 
+            schoolSettings.motto = sanitizeInput(document.getElementById("settingsMotto").value); 
+            schoolSettings.term = document.getElementById("settingsTerm").value; 
+            schoolSettings.year = sanitizeInput(document.getElementById("settingsYear").value); 
+            document.getElementById("schoolName").innerText = schoolSettings.name; 
+            document.getElementById("termDisplay").innerText = `${schoolSettings.term}, ${schoolSettings.year}`; 
+            await saveToFirebase(); 
+            showToast("Settings saved!"); 
+        }
+        
+        function confirmResetData() { if (confirm("⚠️ WARNING: This will delete ALL students and marks!")) { if (prompt("Type 'CONFIRM' to proceed") === "CONFIRM") { students = []; saveToFirebase(); loadDashboard(); loadStudentsList(); showToast("All data reset"); } } }
+        
+        document.getElementById("schoolLogoInput").addEventListener('change', function(e) { const file = e.target.files[0]; if (file && file.size <= 2 * 1024 * 1024) { const reader = new FileReader(); reader.onload = function(ev) { schoolLogo = ev.target.result; document.getElementById("logoPreview").innerHTML = `<img src="${schoolLogo}" style="width:80px;height:80px;border-radius:50%;">`; showToast("Logo uploaded!"); }; reader.readAsDataURL(file); } else { alert("File too large. Max 2MB."); } });
+        
+        function toggleAIChat() { document.getElementById("aiChat").classList.toggle("open"); }
+        function toggleMobileSidebar() { document.getElementById("sidebar").classList.toggle("open"); }
+        
+        function sendAIMessage() { const input = document.getElementById("chatInput"); const msg = input.value.trim(); if (!msg) return; const body = document.getElementById("chatBody"); body.innerHTML += `<div class="message user-message">${escapeHtml(msg)}</div>`; input.value = ""; setTimeout(() => { let resp = getAIResponse(msg); body.innerHTML += `<div class="message bot-message">${resp}</div>`; body.scrollTop = body.scrollHeight; }, 300); }
+        
+        function getAIResponse(msg) { 
+            const m = msg.toLowerCase(); 
+            if (m.includes("report") || m.includes("report card")) return "📄 To generate report cards: Go to Reports section → Select Class and Stream → Click 'Generate All Report Cards' → Prints professional report cards with positions, performance levels!"; 
+            if (m.includes("clear") && m.includes("marks")) return "🗑️ To clear all marks: Go to Settings → Click 'Clear All Marks Only' → Type 'CLEAR MARKS' to confirm."; 
+            if (m.includes("stream")) return "📊 To analyze streams: Go to 'Stream Analyzer' → Select class → Click on NORTH, SOUTH, EAST, WEST, or ALL STREAMS."; 
+            return "👋 I'm here to help! Try: 'Report cards', 'Clear marks', 'Enter marks', 'Stream Analyzer'"; 
+        }
+        
+        function showSection(section) {
+            document.getElementById("dashboardSection").style.display = section === "dashboard" ? "block" : "none";
+            document.getElementById("studentsSection").style.display = section === "students" ? "block" : "none";
+            document.getElementById("marksSection").style.display = section === "marks" ? "block" : "none";
+            document.getElementById("rankingSection").style.display = section === "ranking" ? "block" : "none";
+            document.getElementById("streamAnalysisSection").style.display = section === "streamAnalysis" ? "block" : "none";
+            document.getElementById("reportsSection").style.display = section === "reports" ? "block" : "none";
+            document.getElementById("settingsSection").style.display = section === "settings" ? "block" : "none";
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const items = document.querySelectorAll('.nav-item');
+            for (let item of items) { if (item.innerText.toLowerCase().includes(section)) { item.classList.add('active'); break; } }
+            if (section === "students") loadStudentsList();
+            if (section === "dashboard") loadDashboard();
+            if (section === "ranking") loadRankings();
+            if (section === "marks") updateClassOptions();
+            if (section === "streamAnalysis") { currentStreamFilter = "North"; loadStreamAnalysis(); }
+            if (window.innerWidth <= 768) { document.getElementById("sidebar").classList.remove("open"); }
+        }
+        
+        function updateDate() { const now = new Date(); document.getElementById("currentDate").innerHTML = now.toLocaleDateString('en-KE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+        function showSignup() { document.getElementById("loginForm").style.display = "none"; document.getElementById("signupForm").style.display = "block"; }
+        function showLogin() { document.getElementById("signupForm").style.display = "none"; document.getElementById("loginForm").style.display = "block"; }
+        
+        updateDate(); setInterval(updateDate, 60000);
+        
+        auth.onAuthStateChanged(async (user) => { 
+            if (user) { 
+                currentUser = user; sessionToken = Date.now().toString();
+                const doc = await db.collection("schools").doc(user.uid).get(); 
+                if (doc.exists) { 
+                    const data = doc.data(); students = data.students || []; 
+                    if (data.settings) schoolSettings = data.settings; 
+                    document.getElementById("schoolName").innerText = schoolSettings.name; 
+                    document.getElementById("termDisplay").innerText = `${schoolSettings.term}, ${schoolSettings.year}`; 
+                    document.getElementById("settingsSchoolName").value = schoolSettings.name; 
+                    document.getElementById("settingsMotto").value = schoolSettings.motto; 
+                    document.getElementById("settingsTerm").value = schoolSettings.term; 
+                    document.getElementById("settingsYear").value = schoolSettings.year; 
+                } 
+                document.getElementById("authSection").style.display = "none"; 
+                document.getElementById("mainApp").style.display = "block"; 
+                loadDashboard(); 
+            } else { 
+                document.getElementById("authSection").style.display = "block"; 
+                document.getElementById("mainApp").style.display = "none"; 
+                showLogin(); 
+            } 
+        });
+        
+        console.log("✅ EduNexa Ultimate - Password eye icon added! Fully ready!");
+    </script>
+</body>
+</html>
