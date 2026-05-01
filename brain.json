@@ -1,0 +1,34 @@
+import os
+import json
+from git import Repo # Requires: pip install gitpython
+
+class AegisBrain:
+    def __init__(self, repo_path):
+        self.repo = Repo(repo_path)
+        self.brain_file = os.path.join(repo_path, "brain.json")
+
+    def update_intelligence(self, target, data):
+        # 1. Load current brain
+        if os.path.exists(self.brain_file):
+            with open(self.brain_file, 'r') as f:
+                intelligence = json.load(f)
+        else:
+            intelligence = {}
+
+        # 2. Add new data (Machine/IP/Signal)
+        intelligence[target] = {
+            "last_seen": str(datetime.now()),
+            "intel": data
+        }
+
+        # 3. Save and "Commit" to the Brain
+        with open(self.brain_file, 'w') as f:
+            json.dump(intelligence, f, indent=4)
+
+        self.repo.index.add([self.brain_file])
+        self.repo.index.commit(f"Updated intelligence for target: {target}")
+        
+        # 4. Sync to remote (Github/Gitlab)
+        origin = self.repo.remote(name='origin')
+        origin.push()
+        print(f"[!] Intelligence pushed to Git Brain.")
